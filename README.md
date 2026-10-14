@@ -85,8 +85,17 @@ Both lane lines are detected clearly on all test images, including the yellow li
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-TODO: Add your text here!!!
+In the camera image, parallel lane lines converge toward the horizon. To measure lane curvature and width, the image is transformed into a top-down ("birds-eye") view in which the lane lines are parallel again.
 
+I picked four source points on `straight_lines1.jpg` that lie on the lane lines and form a rectangle on the road, which appears as a trapezoid in the image. They are mapped to four destination points forming an upright rectangle.
+
+`cv2.getPerspectiveTransform()` computes the 3×3 transformation matrix `M` from these point pairs, and its inverse `Minv` from the swapped pairs. The constants `M` and `MINV` are computed once when the module is loaded. The function `warp()` applies `M` with `cv2.warpPerspective()`, and `unwarp()` applies `Minv`. `unwarp()` is used at the end of the pipeline to draw the detected lane back onto the camera image.
+
+I verified the transform by drawing the source points on a straight road image and the destination points on its warped counterpart. Both lane lines are vertical and parallel after warping, and they lie on the destination rectangle:
+![alt text](warped_straight_lines1.png)
+Applied to the binary image, the transform also removes most of the noise above the horizon and beside the road:
+![alt text](warped_binary_test5.png)
+The 960×540 test images taken with a different camera (`challange*`, `solid*`, `whiteCarLaneSwitch`) are skipped, because both the calibration and the source points are valid only for the 1280×720 camera. Warped binaries of all other test images are saved in `output_images/warped_binary/`.
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
 TODO: Add your text here!!!
