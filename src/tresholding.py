@@ -25,13 +25,14 @@ OUT_DIR = ROOT / "output_images"
 BINARY_DIR = OUT_DIR / "binary"
 
 # ----------------------------------------------------------------------------
-# Pragovi - podesavanje ponasanja
+# Pragovi - ovde se podesava ponasanje
 # ----------------------------------------------------------------------------
 SOBEL_KERNEL = 3
-SOBEL_X_THRESH = (20, 100)   # jacina vertikalne ivice (0-255 posle skaliranja)
+SOBEL_X_THRESH = (30, 100)   # jacina vertikalne ivice (0-255 posle skaliranja)
 S_THRESH = (170, 255)        # saturacija
+S_MIN_LIGHTNESS = 100        # tamne senke imaju visok S -> S maska samo gde je L dovoljno visok
 # HLS u OpenCV-u: H 0-179, L 0-255, S 0-255
-YELLOW_LOW = (15, 30, 80)    # (H, L, S)
+YELLOW_LOW = (15, 80, 130)    # (H, L, S) S >= 130 je moralo da svetao bez beton ne prolazi kao zuta
 YELLOW_HIGH = (35, 204, 255)
 WHITE_LOW = (0, 200, 0)
 WHITE_HIGH = (179, 255, 255)
@@ -75,7 +76,8 @@ def threshold(img, return_layers=False):
     l_ch, s_ch = hls[:, :, 1], hls[:, :, 2]
 
     grad = sobel_x_binary(l_ch)
-    color = channel_binary(s_ch, S_THRESH) | yellow_white_binary(hls)
+    saturated = channel_binary(s_ch, S_THRESH) & (l_ch >= S_MIN_LIGHTNESS)
+    color = saturated | yellow_white_binary(hls)
     combined = grad | color
 
     if return_layers:
