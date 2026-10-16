@@ -98,8 +98,18 @@ Applied to the binary image, the transform also removes most of the noise above 
 The 960×540 test images taken with a different camera (`challange*`, `solid*`, `whiteCarLaneSwitch`) are skipped, because both the calibration and the source points are valid only for the 1280×720 camera. Warped binaries of all other test images are saved in `output_images/warped_binary/`.
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-TODO: Add your text here!!!
+The input is the warped binary image from step 3. Lane pixels are found in three stages:
+1. Histogram (`lane_histogram()`, `find_base_positions()`): the white pixels in the bottom half of the image are summed per column. Lane lines are close to vertical in the birds-eye view, so they produce two clear peaks. The strongest peak left of the image center is the starting position of the left line, and the strongest peak right of the center is the start of the right line. Columns with x < 100 and x > 1180 are ignored (gray areas in the figure below). This excludes the edge of the concrete barrier, which appears as a thin line at the far left of several warped images.
+2. Sliding windows (`sliding_window()`): starting from the two peaks, 9 windows per line are stacked from the bottom to the top of the image. Each window is 200 px wide (`MARGIN = 100`). All white pixels inside a window are assigned to that line. If a window contains more than 50 pixels (`MINPIX`), the next window is centered on their mean x position, so the windows follow the line when it curves. For dashed lines, empty windows simply keep the previous x position.
+3. Polynomial fit (`fit_line()`): a second-order polynomial is fitted through the pixels of each line with `np.polyfit()`: `x = A·y² + B·y + C` x is fitted as a function of y, not the other way around, because the lines are nearly vertical: one x value can correspond to many y values. A line is considered not found if fewer than 300 pixels are assigned to it.
 
+In the figure below, the green rectangles are the windows, red and blue pixels are assigned to the left and right line, and the yellow curves are the fitted polynomials:
+![alt text](lane_fit_test5.png)
+
+Both lines were found on all 8 test images from the 1280×720 camera. The coefficient A describes the curvature. On the straight road images it is close to zero, and on the curved road images both lines bend in the same direction (same sign of A). The right line always has fewer pixels because it is dashed, so its fit is less certain. On `test4.jpg`, for example, its curvature is about 3.5 times larger than that of the left line, which is influenced by a single dash near the top of the image:
+![alt text](test4.jpg)
+
+For video, `search_around_poly()` searches only within ±100 px around the polynomial from the previous frame instead of starting the window search from scratch. `find_lane()` selects the method automatically and falls back to sliding windows if the search around the previous polynomial finds too few pixels.
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
 TODO: Add your text here!!!
