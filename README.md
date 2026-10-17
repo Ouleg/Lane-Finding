@@ -130,10 +130,17 @@ Vehicle position: the camera is mounted in the middle of the vehicle, so the veh
 
 A positive offset means the vehicle is right of the lane center, a negative offset means it is left of center. `lane_metrics()` also returns the lane width and the distance from the vehicle center to each line. The distances are used later for the lane departure warning.
 
-
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-TODO: Add your text here!!!
+`process_image()` runs the complete single-image pipeline:
+
+`undistort → threshold → warp → find_lane → lane_metrics → draw`
+
+The drawing (`draw_lane()`) works in the birds-eye view first:
+
+1. The area between the two polynomials is filled in green with `cv2.fillPoly()`. The left line is drawn in orange and the right line in blue.
+2. The drawing is warped back into the camera perspective with the inverse matrix `Minv` (`unwarp()` from step 3).
+3. It is blended semi-transparently over the undistorted image with `cv2.addWeighted()`.
 
 ### Pipeline (video)
 
