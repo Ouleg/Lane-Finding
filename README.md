@@ -142,6 +142,19 @@ The drawing (`draw_lane()`) works in the birds-eye view first:
 2. The drawing is warped back into the camera perspective with the inverse matrix `Minv` (`unwarp()` from step 3).
 3. It is blended semi-transparently over the undistorted image with `cv2.addWeighted()`.
 
+Two additions make the result easier to read and debug:
+
+Info panel (`draw_panel()`, top left): the lane radius and the vehicle offset from step 5. A radius above 3000 m is shown as "straight".
+Birds-eye inset (`draw_inset()`, top right): a small copy of the warped binary image with the sliding windows, the detected pixels and the fitted polynomials. It shows directly which pixels the lane estimate is based on.
+
+![alt text](final_test5.jpg)
+
+On a straight road and on a curved road with shadows and a change of the road surface:
+![alt text](straight_lines1.jpg)
+![alt text](test4-1.jpg)
+
+The detected lane matches the real lane on all 8 test images:
+
 ### Pipeline (video)
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
