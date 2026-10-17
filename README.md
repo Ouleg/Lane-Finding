@@ -112,7 +112,24 @@ Both lines were found on all 8 test images from the 1280×720 camera. The coeffi
 For video, `search_around_poly()` searches only within ±100 px around the polynomial from the previous frame instead of starting the window search from scratch. `find_lane()` selects the method automatically and falls back to sliding windows if the search around the previous polynomial finds too few pixels.
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-TODO: Add your text here!!!
+Pixels to meters. The polynomials from step 4 are in pixels of the birds-eye image. They are converted to meters using known dimensions of a US highway. The y factor is consistent with the dashed lane markings: one dash plus one gap is 12 m (3 m + 9 m), which is about 300 px in the warped images.
+
+Radius of curvature (`poly_to_meters()`, `radius_of_curvature()`): the coefficients of `x = A·y² + B·y + C` are scaled to meters:
+
+`A_m = A · XM_PER_PIX / YM_PER_PIX², B_m = B · XM_PER_PIX / YM_PER_PIX`
+
+The radius is then computed with
+
+`R = (1 + (2·A_m·y + B_m)²)^(3/2) / |2·A_m|`
+
+at the bottom of the image (`y = 719`), which is the point directly in front of the vehicle. The lane radius is the mean of the left and right line radius.
+
+Vehicle position: the camera is mounted in the middle of the vehicle, so the vehicle center is the image center (`x = 640`). The lane center is the midpoint between the two lines at the bottom of the image:
+
+`offset = (vehicle center − lane center) · XM_PER_PIX`
+
+A positive offset means the vehicle is right of the lane center, a negative offset means it is left of center. `lane_metrics()` also returns the lane width and the distance from the vehicle center to each line. The distances are used later for the lane departure warning.
+
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
