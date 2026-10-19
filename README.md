@@ -227,5 +227,33 @@ On the three project videos and on `challenge01` and `challenge02` the lane is d
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-TODO: Add your text here!!!
+**Problems I faced**
 
+1. Thresholds that work on the test images do not work everywhere. The first thresholding version (Sobel gradient + HLS color) was tuned on the test images and worked on all of them. On `challenge02.mp4` it failed for two reasons:
+* The gradient also detected the concrete barrier, the asphalt/concrete border and dark tar seams.
+* The pale yellow line was below the HLS saturation threshold. Lowering the threshold would have accepted the beige bridge concrete from `test1.jpg` as yellow paint.
+Changing individual thresholds could not fix this. The fix was a different feature: the top-hat "narrow bright stripe" mask together with the LAB b channel (step 2). The lesson: decide on features by looking at the failure cases, and check every change on all available data, not only on the image that motivated it.
+
+2. The perspective transform is very sensitive. The source points are fixed and assume a flat road and a fixed camera pitch. In `challenge02.mp4` the horizon is only about 15 px lower than in the test images, and this was enough to make the lane lines converge by about 1 m in the birds-eye view. Most of the "bad" frames of that video were caused by this, not by the line detection. The debug log (`raw_width_diff_m`) made the cause visible.
+3. The dashed line is the weak point. The right line often has 5–10 times fewer pixels than the solid left line. A polynomial through two or three short dashes can have almost any curvature, so the left and right radius often differ by a factor of 2–3 on single images (step 5). In the video this is handled by the sanity check, smoothing and the weak line rescue. On single images it remains visible.
+4. Measuring curvature is inherently noisy. The camera sees only about 30 m of road. On a 1 km curve the line deviates by only about 0.45 m over that distance, and on a straight road by a few centimeters. So the radius of nearly straight roads jumps between 3 km and 50 km and is shown as "straight". The lane width and the vehicle offset are much more stable than the radius.
+5. Two different cameras. `project_video01–02` come from a second camera without chessboard images, so they cannot be undistorted. Their source points were chosen manually, and the pixel-to-meter factors are only approximate for this camera.
+
+**Where the pipeline fails or is likely to fail**
+
+| Situation | Example | What happens |
+|---|---|---|
+| Sharp curves (radius ≈ 100 m) | `challenge03.mp4` | The line leaves the fixed source trapezoid and the birds-eye image, the sliding windows lose it, and more than half of the frames need a rescued line. |
+| Strong light changes, sun glare, dappled shadows | `challenge03.mp4`, overpass in `challenge02.mp4` | The top-hat mask fires on bright spots between shadows. In very dark areas no line pixels are found at all, and the tracker can only hold the last lane for about 1 s. |
+| Change of road slope or camera pitch | `challenge02.mp4` | The lines are no longer parallel in the birds-eye view. This needs per-video source points. |
+| Lane change | none in the test videos | Both lines move by a whole lane width within a few seconds. The tracker rejects the new lines as a jump and needs a full re-search. |
+| Vehicle in front within ~30 m, worn or missing markings, night, rain, snow | none in the test videos | Not tested. Markings covered by a vehicle or by water reflections would be lost, and bright reflections would produce false lines. |
+
+**How to make it more robust**
+
+* Dynamic perspective: estimate the vanishing point continuously, for example with the same Hough method, smoothed over time, instead of using fixed source points. This would remove the need for per-video points and would handle hills.
+* Fit both lines together: the two lane lines are parallel, so they can share the coefficients A and B and differ only in C. With this constraint, the strong solid line determines the curvature and the dashed line only its position. This is a cleaner version of the current weak line rescue.
+* Weight the fit by confidence levels: a line with many pixels over the whole image height should count more than one with a few dashes. The averaging over frames could use these weights, or a Kalman filter on the polynomial coefficients.
+* Adaptive region of interest: to use a wider and shorter birds-eye region for sharp curves, or move it with the predicted lane, so lines do not leave the image in curves like `challenge03.mp4`.
+* To calibrate every camera: with chessboard images for camera B, its frames could also be undistorted.
+* Learning-based segmentation: a small CNN trained to segment lane markings is much more robust to shadows, glare and worn markings than hand-tuned thresholds.
