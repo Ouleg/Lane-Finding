@@ -97,12 +97,12 @@ The top-hat transform is the image minus its morphological opening. An opening w
 The b channel of the LAB color space measures the blue–yellow axis (128 is neutral). Yellow paint has b ≥ 150 even when it is pale: about 157 in challenge02.mp4. The beige concrete stays below about 140. So one threshold works for both cases where the HLS yellow mask needed contradicting thresholds.
 
 Comparison in the birds-eye view, with version 1 in the middle and version 2 on the right. In `challenge02.mp4`, version 1 loses the pale yellow line and detects the barrier edge and seams. Version 2 detects only the yellow line and the dashed right line:
-![alt text](challenge02_475.png)
+![v1 vs v2 challenge](./output_images/compare/challenge02_475.png)
 On the project video, version 2 is at least as good as version 1 and removes the barrier edge on the far left:
-![alt text](project_video03_1000.png)
+![v1 vs v2 project](./output_images/compare/project_video03_1000.png)
 Version 2 on the test images. Green pixels come from the bright stripe mask, blue pixels from the yellow mask, and the right panel is the final binary image:
-![alt text](binary_test5-1.png)
-![alt text](binary_test4.png)
+![Binary test5](./output_images/binary_test5.png)
+![Binary test4](./output_images/binary_test4.png)
 
 Both lane lines are detected clearly on all test images, including the yellow line on light concrete and the dashed right line. The binary image also contains noise from trees, cars, bright sky and roadside vegetation. All binary results are saved in `output_images/binary/`.
 
@@ -219,7 +219,7 @@ The source points for this video are therefore estimated automatically on a fram
 4. The source points are where the two lines cross the bottom of the image and the row 38 px below the horizon.
 
 The result:
-![alt text](check_challenge02.png)
+![alt text](./output_images/check_challenge02.png)
 After this change, the median width difference between the top and the bottom in `challenge02.mp4` fell from about 1.0 m to 0.18 m.
 
 On the three project videos and on `challenge01` and `challenge02` the lane is detected correctly over the whole video. The rejected frames in `challenge02` are the dark section under the overpass, where the last accepted lane is drawn. `challenge03` (a narrow mountain road with very sharp curves) is detected only partially: more than half of the frames need a rescued line, and the drawn lane often deviates from the real one. The reasons are discussed below.
