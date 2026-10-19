@@ -184,7 +184,16 @@ The detected lane matches the real lane on all 8 test images:
 
 For every video it writes the processed video `output_videos/<name>.mp4` and a log `output_videos/<name>_log.csv`. The log has one row per frame with the detection status, pixel counts, lane radius, vehicle offset, lane width and the distance to each line. The processed videos are not stored in the repository because of their size.
 
-https://drive.google.com/drive/folders/1lp-PvbL_NSN0Of0ycQIBD7DDEAv_wR-S?usp=sharing
+**Processed videos:** [all videos (Lane-Finding-lane-videos)](https://drive.google.com/drive/folders/1lp-PvbL_NSN0Of0ycQIBD7DDEAv_wR-S?usp=sharing)
+
+| Video | Camera | Result |
+|---|---|---|
+| [project_video01](https://drive.google.com/file/d/12Z-wNRooDzyq8Cuh91TgxxAXBAVowsn4/view?usp=sharing) | B | lane detected over the whole video |
+| [project_video02](https://drive.google.com/file/d/1lH3cNyggisdu5wsS4kN4F8habHGDYJf0/view?usp=sharing) | B | lane detected over the whole video |
+| [project_video03](https://drive.google.com/file/d/1UHujuS9VVqR0VC0mBnMqpt4g7hHkdKND/view?usp=sharing) | A | lane detected over the whole video |
+| [challenge01](https://drive.google.com/file/d/1aOQ1gkSVwGuxWYJ3_k7PBYoCJ2iIpWvD/view?usp=sharing) | A | lane detected over the whole video |
+| [challenge02](https://drive.google.com/file/d/1eEq4U6gBzKwPUJsZPi7xRqNEpjIBVLxy/view?usp=sharing) | A, own source points | lane detected, last lane held under the overpass |
+| [challenge03](https://drive.google.com/file/d/1PsaI0J3HNRmMxAbX2x2UcNWsJRPCF0yq/view?usp=sharing) | A | partial, see Discussion | 
 
 Every frame goes through the single-image pipeline from steps 1–6. The video pipeline adds the following on top (`LaneTracker`):
 1. Tracking: after a successful frame, the lines in the next frame are searched only within ±100 px of the previous polynomials (`search_around_poly()`). This is faster and ignores most of the noise further away.
