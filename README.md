@@ -74,13 +74,36 @@ Without this step, lane lines that are straight in the world would appear curved
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
+The thresholding went through two versions. Version 1 worked on all test images but failed on the challenge videos, so the pipeline now uses version 2. Both are kept in the code (`threshold_v1()` and `threshold()`) so they can be compared.
+
 The undistorted image is converted to the HLS color space. Lane colors are easier to separate there than in RGB: the S (saturation) channel stays strong under shadows, and the L (lightness) channel isolates white well. Then three binary masks are combined with a logical OR: Gradient(Sobel x) - `sobel_x_binary()` - for near-vertical edges such as lane line borders, Saturation - `channel_binary()` for strongly colored lines, also in shadow and Yellow/White - `yellow_white_binary()` for the actual paint colors of lane lines.
 
 The Sobel operator in the x direction responds to changes in brightness from left to right. Lane lines seen from the car are close to vertical, so this direction suppresses most horizontal edges, such as shadows across the road. The color masks complement the gradient in places where the contrast is low but the color is still recognizable. An example is the yellow line on the light concrete in `test5.jpg`, which is detected almost only by the color mask (blue).
 
-In the middle panel below, green pixels come from the gradient and blue pixels from the color masks. The right panel is the final binary image:
-![alt text](binary_test5.png)
-![alt text](binary_challange00101.png)
+While tuning version 1, I wrote `src/debug_masks.py`, which shows every mask separately in the birds-eye view. It showed that the light beige concrete of the bridge in `test1.jpg` and `test4.jpg` has a hue in the yellow range and a moderate saturation (S ≈ 80–120). The yellow mask therefore accepted it as yellow paint, until the lower bound was raised to S ≥ 130.
+
+On the challenge videos, version 1 had two problems that could not be fixed by tuning thresholds:
+
+-The Sobel gradient responds to every edge, not only to lane lines. In `challenge02.mp4` this includes the edge of the concrete barrier, the border between dark asphalt and light concrete, and dark tar seams on the road. After warping these look like lane lines, and the left line was often fitted to the barrier.
+-The yellow line in `challenge02.mp4` is pale (S ≈ 80–95), so the HLS yellow mask (S ≥ 130) misses it. Lowering the bound would bring back the beige concrete from `test1.jpg`. The two cases cannot be separated by HLS saturation.
+
+Version 2: bright stripe + LAB yellow (`threshold()`):
+
+`stripe_binary()` for narrow structures brighter than their surroundings: painted lines.
+`yellow_lab_binary()` for yellow paint.
+
+The top-hat transform is the image minus its morphological opening. An opening with a horizontal 31 px kernel removes every bright structure narrower than 31 px, so the difference keeps only those narrow bright structures. A painted line is narrow and brighter than the road, so it passes. A barrier edge, an asphalt/concrete border or a dark seam is not a narrow bright stripe, so it does not pass.
+
+The b channel of the LAB color space measures the blue–yellow axis (128 is neutral). Yellow paint has b ≥ 150 even when it is pale: about 157 in challenge02.mp4. The beige concrete stays below about 140. So one threshold works for both cases where the HLS yellow mask needed contradicting thresholds.
+
+Comparison in the birds-eye view, with version 1 in the middle and version 2 on the right. In `challenge02.mp4`, version 1 loses the pale yellow line and detects the barrier edge and seams. Version 2 detects only the yellow line and the dashed right line:
+![alt text](challenge02_475.png)
+On the project video, version 2 is at least as good as version 1 and removes the barrier edge on the far left:
+![alt text](project_video03_1000.png)
+Version 2 on the test images. Green pixels come from the bright stripe mask, blue pixels from the yellow mask, and the right panel is the final binary image:
+![alt text](binary_test5-1.png)
+![alt text](binary_test4.png)
+
 Both lane lines are detected clearly on all test images, including the yellow line on light concrete and the dashed right line. The binary image also contains noise from trees, cars, bright sky and roadside vegetation. All binary results are saved in `output_images/binary/`.
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
@@ -159,8 +182,38 @@ The detected lane matches the real lane on all 8 test images:
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-TODO: Add your text here!!!
+For every video it writes the processed video `output_videos/<name>.mp4` and a log `output_videos/<name>_log.csv`. The log has one row per frame with the detection status, pixel counts, lane radius, vehicle offset, lane width and the distance to each line. The processed videos are not stored in the repository because of their size.
 
+https://drive.google.com/drive/folders/1lp-PvbL_NSN0Of0ycQIBD7DDEAv_wR-S?usp=sharing
+
+Every frame goes through the single-image pipeline from steps 1–6. The video pipeline adds the following on top (`LaneTracker`):
+1. Tracking: after a successful frame, the lines in the next frame are searched only within ±100 px of the previous polynomials (`search_around_poly()`). This is faster and ignores most of the noise further away.
+2. Sanity check (`sanity_check()`): a frame is accepted only if
+both lines were found,
+the lane width at the bottom of the image is 2.8–4.5 m,
+the lines are roughly parallel: the lane width at the top and at the bottom of the birds-eye image differ by less than 1.0 m.
+3. Smoothing: the drawn lane is the mean of the polynomials from the last 8 accepted frames, so it does not jump from frame to frame.
+4. Weak line rescue (`rescue_weak_line()`): if the check fails, the line with more pixels is trusted, but only if its position at the bottom of the image is within 0.5 m of the previous frame. The other line, usually the dashed one, is replaced by a copy of it, shifted by the lane width from the history.
+5. Recovery: if the check still fails, the last accepted lane is drawn. After 5 failed frames in a row the line search restarts with sliding windows. After 25 failed frames (about 1 s) the history is cleared and "Lane not detected" is shown.
+
+The info panel shows the current status ("ok", "right line from left", "re-search", …), so the behavior of the tracker can be followed directly in the video.
+
+The videos come from two different cameras: A(1280x720) which are `project_video03, challenge01–03`, B(960x540) which are `project_video01–02`. For camera A it is same camera as the test images: calibration and source points from steps 1 and 3, but for camera B is different camera without chessboard images: the frame is resized to 1280×720, undistortion is skipped, and separate source points are used (`SRC_B`).
+The source points for camera B were chosen on the first frame of `project_video01`, where the road is straight. They were checked the same way as in step 3. 
+
+In `challenge02.mp4` the lane lines converged toward the top of the birds-eye image. The log showed a width difference of about 1 m between the top and the bottom in almost every frame, so the sanity check failed in most frames. The video comes from camera A, but the horizon is about 15 px lower than in the test images, because the camera was mounted with a slightly different tilt or the road has a different slope. Near the top of the source trapezoid, 15 px already makes a difference of about 1 m in the birds-eye view.
+
+The source points for this video are therefore estimated automatically on a frame with a straight road (`fit_src()`):
+1. The binary image is limited to a trapezoid in front of the car.
+2. `cv2.HoughLinesP()` finds line segments. Segments with a negative slope belong to the left line and segments with a positive slope to the right line. A straight line x = a·y + b is fitted through each group.
+3. The intersection of the two lines is the vanishing point (horizon at y = 438 instead of about 425 for the test images).
+4. The source points are where the two lines cross the bottom of the image and the row 38 px below the horizon.
+
+The result:
+![alt text](check_challenge02.png)
+After this change, the median width difference between the top and the bottom in `challenge02.mp4` fell from about 1.0 m to 0.18 m.
+
+On the three project videos and on `challenge01` and `challenge02` the lane is detected correctly over the whole video. The rejected frames in `challenge02` are the dark section under the overpass, where the last accepted lane is drawn. `challenge03` (a narrow mountain road with very sharp curves) is detected only partially: more than half of the frames need a rescued line, and the drawn lane often deviates from the real one. The reasons are discussed below.
 ### Discussion
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
