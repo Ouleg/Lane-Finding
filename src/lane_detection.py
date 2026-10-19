@@ -39,6 +39,8 @@ N_WINDOWS = 9        # broj prozora po visini slike
 MARGIN = 100         # pola sirine prozora (px)
 MINPIX = 50          # min broj piksela da bi se prozor pomerio
 MIN_LINE_PIXELS = 300  # ispod ovoga smatramo da linija nije pronadjena
+MIN_Y_SPAN = 250       # pikseli linije moraju pokrivati bar ovoliko po visini (px);
+                       # polinom kroz jednu kratku crtu bi bio proizvoljno zakrivljen
 # Histogram trazi vrhove samo u ovom opsegu x. Ivica ograde (x < 100) i
 # desna ivica slike se ignorisu; linije su posle warpa oko x=320 i x=960.
 HIST_X_RANGE = (100, 1180)
@@ -107,8 +109,11 @@ def sliding_window(binary_warped, return_windows=False):
 # 3. Polinom
 # ----------------------------------------------------------------------------
 def fit_line(x, y):
-    """x = A*y^2 + B*y + C. Vraca [A, B, C] ili None ako nema dovoljno piksela."""
-    if len(x) < MIN_LINE_PIXELS:
+    """
+    x = A*y^2 + B*y + C. Vraca [A, B, C] ili None ako nema dovoljno piksela
+    ili ako pikseli pokrivaju premali deo visine slike.
+    """
+    if len(x) < MIN_LINE_PIXELS or np.ptp(y) < MIN_Y_SPAN:
         return None
     return np.polyfit(y, x, 2)
 
