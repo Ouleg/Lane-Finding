@@ -80,7 +80,7 @@ Without this step, lane lines that are straight in the world would appear curved
 
 The code for this step is in src/tresholding.py (function threshold()) and is run with:
 
-python -m src.thresholding
+python -m src.tresholding
 
 The thresholding went through two versions. Version 1 worked on all test images but failed on the challenge videos, so the pipeline now uses version 2. Both are kept in the code (`threshold_v1()` and `threshold()`) so they can be compared.
 
