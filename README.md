@@ -37,6 +37,10 @@ You're reading it!
 
 ### Camera Calibration
 
+The code for this step is in src/calibration.py and is run with:
+
+python -m src.calibration
+
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
 The calibration images in `camera_cal/` show a chessboard with 9×6 inner corners photographed from 20 different angles and distances.
@@ -74,6 +78,10 @@ Without this step, lane lines that are straight in the world would appear curved
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
+The code for this step is in src/tresholding.py (function threshold()) and is run with:
+
+python -m src.thresholding
+
 The thresholding went through two versions. Version 1 worked on all test images but failed on the challenge videos, so the pipeline now uses version 2. Both are kept in the code (`threshold_v1()` and `threshold()`) so they can be compared.
 
 The undistorted image is converted to the HLS color space. Lane colors are easier to separate there than in RGB: the S (saturation) channel stays strong under shadows, and the L (lightness) channel isolates white well. Then three binary masks are combined with a logical OR: Gradient(Sobel x) - `sobel_x_binary()` - for near-vertical edges such as lane line borders, Saturation - `channel_binary()` for strongly colored lines, also in shadow and Yellow/White - `yellow_white_binary()` for the actual paint colors of lane lines.
@@ -108,6 +116,10 @@ Both lane lines are detected clearly on all test images, including the yellow li
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
+The code for this step is in src/perspective.py and is run with:
+
+python -m src.perspective
+
 In the camera image, parallel lane lines converge toward the horizon. To measure lane curvature and width, the image is transformed into a top-down ("birds-eye") view in which the lane lines are parallel again.
 
 I picked four source points on `straight_lines1.jpg` that lie on the lane lines and form a rectangle on the road, which appears as a trapezoid in the image. They are mapped to four destination points forming an upright rectangle.
@@ -120,6 +132,10 @@ Applied to the binary image, the transform also removes most of the noise above 
 ![alt text](warped_binary_test5.png)
 The 960×540 test images taken with a different camera (`challange*`, `solid*`, `whiteCarLaneSwitch`) are skipped, because both the calibration and the source points are valid only for the 1280×720 camera. Warped binaries of all other test images are saved in `output_images/warped_binary/`.
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+
+The code for this step is in src/lane_detection.py and is run with:
+
+python -m src.lane_detection
 
 The input is the warped binary image from step 3. Lane pixels are found in three stages:
 1. Histogram (`lane_histogram()`, `find_base_positions()`): the white pixels in the bottom half of the image are summed per column. Lane lines are close to vertical in the birds-eye view, so they produce two clear peaks. The strongest peak left of the image center is the starting position of the left line, and the strongest peak right of the center is the start of the right line. Columns with x < 100 and x > 1180 are ignored (gray areas in the figure below). This excludes the edge of the concrete barrier, which appears as a thin line at the far left of several warped images.
@@ -134,6 +150,10 @@ Both lines were found on all 8 test images from the 1280×720 camera. The coeffi
 
 For video, `search_around_poly()` searches only within ±100 px around the polynomial from the previous frame instead of starting the window search from scratch. `find_lane()` selects the method automatically and falls back to sliding windows if the search around the previous polynomial finds too few pixels.
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+
+The code for this step is in src/metrics.py (function lane_metrics()) and is run with:
+
+python -m src.metrics
 
 Pixels to meters. The polynomials from step 4 are in pixels of the birds-eye image. They are converted to meters using known dimensions of a US highway. The y factor is consistent with the dashed lane markings: one dash plus one gap is 12 m (3 m + 9 m), which is about 300 px in the warped images.
 
@@ -154,6 +174,10 @@ Vehicle position: the camera is mounted in the middle of the vehicle, so the veh
 A positive offset means the vehicle is right of the lane center, a negative offset means it is left of center. `lane_metrics()` also returns the lane width and the distance from the vehicle center to each line. The distances are used later for the lane departure warning.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+
+The code for this step is in src/visualization.py and is run with:
+
+python -m src.visualization
 
 `process_image()` runs the complete single-image pipeline:
 
@@ -181,6 +205,11 @@ The detected lane matches the real lane on all 8 test images:
 ### Pipeline (video)
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+
+The code for this step is in src/video.py and is run with:
+
+python -m src.video all         
+python -m src.video test_videos/project_video03.mp4    
 
 For every video it writes the processed video `output_videos/<name>.mp4` and a log `output_videos/<name>_log.csv`. The log has one row per frame with the detection status, pixel counts, lane radius, vehicle offset, lane width and the distance to each line. The processed videos are not stored in the repository because of their size.
 
